@@ -72,9 +72,9 @@ func validateFormat(rawFormat string) (Format, error) {
 		return FormatMarkdown, nil
 	case "json", "markdown":
 		return Format(rawFormat), nil
+	default:
+		return "", fmt.Errorf("%w: unsupported format: %s", ErrInvalidUsage, rawFormat)
 	}
-
-	return "", fmt.Errorf("%w: unsupported format: %s", ErrInvalidUsage, rawFormat)
 }
 
 func validateOutput(rawOutput string, format Format) error {
@@ -101,26 +101,14 @@ func validateOutput(rawOutput string, format Format) error {
 }
 
 func validateDates(rawFrom, rawTo string) (time.Time, time.Time, error) {
-	const dateLayout = "2006-01-02"
-
-	var from, to time.Time
-
-	if rawFrom != "" {
-		parsed, err := time.Parse(dateLayout, rawFrom)
-		if err != nil {
-			return time.Time{}, time.Time{}, fmt.Errorf("%w: invalid from date: %s", ErrInvalidUsage, rawFrom)
-		}
-
-		from = parsed
+	from, err := parseDate(rawFrom, "from")
+	if err != nil {
+		return time.Time{}, time.Time{}, err
 	}
 
-	if rawTo != "" {
-		parsed, err := time.Parse(dateLayout, rawTo)
-		if err != nil {
-			return time.Time{}, time.Time{}, fmt.Errorf("%w: invalid to date: %s", ErrInvalidUsage, rawTo)
-		}
-
-		to = parsed
+	to, err := parseDate(rawTo, "to")
+	if err != nil {
+		return time.Time{}, time.Time{}, err
 	}
 
 	if !from.IsZero() && !to.IsZero() {
@@ -153,4 +141,19 @@ func validatePath(rawPath string) error {
 	}
 
 	return nil
+}
+
+func parseDate(raw, fieldName string) (time.Time, error) {
+	const dateLayout = "2006-01-02"
+
+	if raw == "" {
+		return time.Time{}, nil
+	}
+
+	parsed, err := time.Parse(dateLayout, raw)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("%w: invalid %s date: %s", ErrInvalidUsage, fieldName, raw)
+	}
+
+	return parsed, nil
 }

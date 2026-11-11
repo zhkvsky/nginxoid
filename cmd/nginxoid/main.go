@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -12,23 +13,18 @@ import (
 )
 
 func main() {
-	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+	ctx := context.Background()
+	os.Exit(run(ctx, os.Args[1:], os.Stdout, os.Stderr))
 }
 
-func run(args []string, stdout, stderr io.Writer) int {
-	rawCfg, err := config.ParseFlags(args)
+func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
+	cfg, err := config.Parse(args)
 	if err != nil {
-		_, _ = fmt.Fprintf(stderr, "Error parsing flags: %v\n", err)
+		_, _ = fmt.Fprintf(stderr, "Error parsing configuration: %v\\n", err)
 		return 2
 	}
 
-	cfg, err := config.Validate(rawCfg)
-	if err != nil {
-		_, _ = fmt.Fprintf(stderr, "Error validating config: %v\n", err)
-		return 2
-	}
-
-	src, err := source.Open(cfg.Path)
+	src, err := source.Open(ctx, cfg.Path)
 	if err != nil {
 		_, _ = fmt.Fprintf(stderr, "Error opening path: %v\n", err)
 		if errors.Is(err, source.ErrNotFound) {

@@ -20,7 +20,7 @@ func TestOpen_SingleFile(t *testing.T) {
 	err := os.WriteFile(filePath, []byte(content), 0o600)
 	require.NoError(t, err)
 
-	src, err := Open(filePath)
+	src, err := Open(t.Context(), filePath)
 	require.NoError(t, err)
 
 	require.NotNil(t, src)
@@ -48,7 +48,7 @@ func TestOpen_Glob(t *testing.T) {
 
 	pattern := filepath.Join(tmpDir, "*.log")
 
-	src, err := Open(pattern)
+	src, err := Open(t.Context(), pattern)
 	require.NoError(t, err)
 
 	require.NotNil(t, src)
@@ -72,7 +72,7 @@ func TestOpen_URL(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	src, err := Open(ts.URL)
+	src, err := Open(t.Context(), ts.URL)
 	require.NoError(t, err)
 
 	require.NotNil(t, src)
@@ -92,7 +92,7 @@ func TestOpen_Errors(t *testing.T) {
 		tmpDir := t.TempDir()
 		missingPath := filepath.Join(tmpDir, "missing.log")
 
-		src, err := Open(missingPath)
+		src, err := Open(t.Context(), missingPath)
 		require.Error(t, err)
 		assert.Nil(t, src)
 		assert.ErrorIs(t, err, ErrNotFound)
@@ -102,7 +102,7 @@ func TestOpen_Errors(t *testing.T) {
 		tmpDir := t.TempDir()
 		emptyPattern := filepath.Join(tmpDir, "*.nonexistent")
 
-		src, err := Open(emptyPattern)
+		src, err := Open(t.Context(), emptyPattern)
 		require.Error(t, err)
 		assert.Nil(t, src)
 		assert.ErrorIs(t, err, ErrNotFound)
@@ -114,7 +114,7 @@ func TestOpen_Errors(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		src, err := Open(ts.URL)
+		src, err := Open(t.Context(), ts.URL)
 		require.Error(t, err)
 		assert.Nil(t, src)
 		assert.ErrorIs(t, err, ErrNotFound)

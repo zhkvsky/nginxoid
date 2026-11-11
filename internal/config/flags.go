@@ -32,3 +32,18 @@ func ParseFlags(args []string) (RawConfig, error) {
 
 	return rawCfg, nil
 }
+
+// Parse parses command-line arguments and validates the resulting configuration.
+func Parse(args []string) (*Config, error) {
+	rawCfg, err := ParseFlags(args)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg, err := Validate(rawCfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
+}

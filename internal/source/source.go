@@ -19,22 +19,22 @@ type Source struct {
 }
 
 // Open opens local files matching a path or glob pattern, or fetches a remote stream via URL.
-func Open(path string) (*Source, error) {
+func Open(ctx context.Context, path string) (*Source, error) {
 	isURL := strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://")
 
 	if isURL {
-		return openURL(path)
+		return openURL(ctx, path)
 	}
 
 	return openFiles(path)
 }
 
-func openURL(rawURL string) (*Source, error) {
+func openURL(ctx context.Context, rawURL string) (*Source, error) {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, rawURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("%w: failed to create request: %w", ErrNotFound, err)
 	}
