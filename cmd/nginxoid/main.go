@@ -20,7 +20,7 @@ func main() {
 func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	cfg, err := config.Parse(args)
 	if err != nil {
-		_, _ = fmt.Fprintf(stderr, "Error parsing configuration: %v\\n", err)
+		_, _ = fmt.Fprintf(stderr, "Error parsing configuration: %v\n", err)
 		return 2
 	}
 
