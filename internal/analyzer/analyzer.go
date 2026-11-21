@@ -1,11 +1,22 @@
 package analyzer
 
 import (
+	"bufio"
 	"cmp"
+	"fmt"
+	"io"
+	"maps"
 	"math"
 	"slices"
+	"time"
 
 	"github.com/zhkvsky/nginxoid/internal/parser"
+)
+
+const (
+	maxTopResources    = 10
+	initialScanBufSize = 64 * 1024
+	maxScanLineSize    = 1024 * 1024
 )
 
 // Analyzer accumulates statistics from processed log records.
@@ -65,11 +76,45 @@ func (a *Analyzer) Add(rec *parser.LogRecord) {
 	a.responseSizes = append(a.responseSizes, rec.BodyBytesSent)
 }
 
+// Process reads log lines from stream r, filters them by the [from, to] date range, and aggregates statistics.
+func (a *Analyzer) Process(r io.Reader, from, to time.Time, warnOut io.Writer) error {
+	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, 0, initialScanBufSize), maxScanLineSize)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		rec, err := parser.ParseLine(line)
+		if err != nil {
+			if warnOut != nil {
+				_, _ = fmt.Fprintf(warnOut, "WARN: skipped malformed log line: %v\n", err)
+			}
+
+			a.AddMalformed()
+
+			continue
+		}
+
+		if !MatchesDateRange(rec.TimeLocal, from, to) {
+			continue
+		}
+
+		a.Add(rec)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("read log stream: %w", err)
+	}
+
+	return nil
+}
+
 // Result computes the final metrics (average, p95, top 10 resources) and returns the summary.
 func (a *Analyzer) Result() Result {
-	var avg float64
-
-	var p95 int64
+	var (
+		avg float64
+		p95 int64
+	)
 
 	if a.requestCount > 0 {
 		avg = float64(a.totalBytes) / float64(a.requestCount)
@@ -88,21 +133,17 @@ func (a *Analyzer) Result() Result {
 	}
 
 	slices.SortFunc(topResources, func(x, y ResourceStat) int {
-		if x.Count != y.Count {
-			return cmp.Compare(y.Count, x.Count)
-		}
-
-		return cmp.Compare(x.Resource, y.Resource)
+		return cmp.Or(cmp.Compare(y.Count, x.Count), cmp.Compare(x.Resource, y.Resource))
 	})
 
-	if len(topResources) > 10 {
-		topResources = topResources[:10]
+	if len(topResources) > maxTopResources {
+		topResources = topResources[:maxTopResources]
 	}
 
 	return Result{
 		TotalRequests:  a.requestCount,
 		MalformedLines: a.malformedCount,
-		ResponseCodes:  a.statusCodes,
+		ResponseCodes:  maps.Clone(a.statusCodes),
 		TopResources:   topResources,
 		AverageBytes:   avg,
 		MaxBytes:       a.maxBytes,

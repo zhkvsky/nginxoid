@@ -1,4 +1,4 @@
-// Package config handles parsing, typing, and validating application startup flags.
+// Package config handles parsing, typing, and validating application startup parameters.
 package config
 
 import (
@@ -6,18 +6,20 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/zhkvsky/nginxoid/internal/timeutil"
 )
 
-// Format represents the supported output report format.
+// Format defines the supported output report format.
 type Format string
 
-// Supported report formats.
+// Supported output report formats.
 const (
 	FormatJSON     Format = "json"
 	FormatMarkdown Format = "markdown"
 )
 
-// RawConfig holds unvalidated raw string CLI arguments.
+// RawConfig holds unvalidated raw string command-line arguments.
 type RawConfig struct {
 	Path   string
 	Format string
@@ -26,7 +28,7 @@ type RawConfig struct {
 	To     string
 }
 
-// Config represents validated application parameters parsed into target types.
+// Config holds validated application parameters converted to target types.
 type Config struct {
 	Path   string
 	Format Format
@@ -35,7 +37,7 @@ type Config struct {
 	To     time.Time
 }
 
-// Validate validates raw CLI parameters and constructs a valid Config instance.
+// Validate validates raw string parameters in rawCfg and constructs a valid Config.
 func Validate(rawCfg RawConfig) (*Config, error) {
 	format, err := validateFormat(rawCfg.Format)
 	if err != nil {
@@ -118,7 +120,7 @@ func validateDates(rawFrom, rawTo string) (time.Time, time.Time, error) {
 	}
 
 	if !to.IsZero() {
-		to = to.Add(24*time.Hour - time.Nanosecond)
+		to = timeutil.EndOfDay(to)
 	}
 
 	return from, to, nil
@@ -144,13 +146,11 @@ func validatePath(rawPath string) error {
 }
 
 func parseDate(raw, fieldName string) (time.Time, error) {
-	const dateLayout = "2006-01-02"
-
 	if raw == "" {
 		return time.Time{}, nil
 	}
 
-	parsed, err := time.Parse(dateLayout, raw)
+	parsed, err := time.Parse(timeutil.DateLayout, raw)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("%w: invalid %s date: %s", ErrInvalidUsage, fieldName, raw)
 	}

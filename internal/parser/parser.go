@@ -6,11 +6,11 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+
+	"github.com/zhkvsky/nginxoid/internal/timeutil"
 )
 
 var logRegex = regexp.MustCompile(`^(\S+)\s+-\s+(\S+)\s+\[([^\]]+)\]\s+"(\S+)\s+(\S+)\s+(\S+)"\s+(\d+)\s+(\d+)\s+"([^"]*)"\s+"([^"]*)"$`)
-
-const timeLayout = "02/Jan/2006:15:04:05 -0700"
 
 // LogRecord represents a single parsed NGINX log line.
 type LogRecord struct {
@@ -33,7 +33,7 @@ func ParseLine(line string) (*LogRecord, error) {
 		return nil, ErrMalformedLine
 	}
 
-	parsedTime, err := time.Parse(timeLayout, matches[3])
+	parsedTime, err := time.Parse(timeutil.NginxTimeLayout, matches[3])
 	if err != nil {
 		return nil, fmt.Errorf("%w: failed to parse time %s: %w", ErrMalformedLine, matches[3], err)
 	}
