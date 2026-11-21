@@ -28,6 +28,7 @@ type Analyzer struct {
 	totalBytes     int64
 	maxBytes       int64
 	responseSizes  []int64
+	processedLines int
 }
 
 // ResourceStat holds request count statistics for a single resource.
@@ -45,6 +46,7 @@ type Result struct {
 	AverageBytes   float64
 	MaxBytes       int64
 	P95Bytes       int64
+	ProcessedLines int
 }
 
 // New creates and initializes a new Analyzer instance.
@@ -83,6 +85,8 @@ func (a *Analyzer) Process(r io.Reader, from, to time.Time, warnOut io.Writer) e
 
 	for scanner.Scan() {
 		line := scanner.Text()
+
+		a.processedLines++
 
 		rec, err := parser.ParseLine(line)
 		if err != nil {
@@ -148,5 +152,6 @@ func (a *Analyzer) Result() Result {
 		AverageBytes:   avg,
 		MaxBytes:       a.maxBytes,
 		P95Bytes:       p95,
+		ProcessedLines: a.processedLines,
 	}
 }
