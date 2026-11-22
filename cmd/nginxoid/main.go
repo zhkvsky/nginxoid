@@ -8,7 +8,9 @@ import (
 	"io"
 	"os"
 
+	"github.com/zhkvsky/nginxoid/internal/analyzer"
 	"github.com/zhkvsky/nginxoid/internal/config"
+	"github.com/zhkvsky/nginxoid/internal/report"
 	"github.com/zhkvsky/nginxoid/internal/source"
 )
 
@@ -37,10 +39,24 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		_ = src.Reader.Close()
 	}()
 
-	_, _ = fmt.Fprintf(stdout, "Sources opened: %d\n", len(src.Files))
-	for _, file := range src.Files {
-		_, _ = fmt.Fprintf(stdout, "- %s\n", file)
+	stats := analyzer.New()
+	if err = stats.Process(src.Reader, cfg.From, cfg.To, stderr); err != nil {
+		_, _ = fmt.Fprintf(stderr, "Error processing logs: %v\n", err)
+		return 1
 	}
+
+	res := stats.Result()
+
+	if err = report.Write(cfg.Output, cfg.Format, src.Files, res); err != nil {
+		_, _ = fmt.Fprintf(stderr, "Error writing report: %v\n", err)
+		if errors.Is(err, report.ErrReportAlreadyExists) {
+			return 2
+		}
+
+		return 1
+	}
+
+	_, _ = fmt.Fprintf(stdout, "Report saved to %s\n", cfg.Output)
 
 	return 0
 }
