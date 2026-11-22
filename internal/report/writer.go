@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/zhkvsky/nginxoid/internal/analyzer"
@@ -26,38 +28,38 @@ func renderJSON(rep Report) ([]byte, error) {
 func renderMarkdown(rep Report) []byte {
 	var b strings.Builder
 
-	b.WriteString("# Отчет анализа логов\n\n")
+	b.WriteString("# Log Analysis Report\n\n")
 
-	_, _ = fmt.Fprintf(&b, "- Количество файлов: %d\n", rep.FilesCount)
-	_, _ = fmt.Fprintf(&b, "- Обработано строк: %d\n", rep.ProcessedLinesCount)
-	_, _ = fmt.Fprintf(&b, "- Повреждённых строк: %d\n", rep.MalformedLinesCount)
-	_, _ = fmt.Fprintf(&b, "- Всего запросов: %d\n\n", rep.TotalRequestsCount)
+	_, _ = fmt.Fprintf(&b, "- Files count: %d\n", rep.FilesCount)
+	_, _ = fmt.Fprintf(&b, "- Processed lines: %d\n", rep.ProcessedLinesCount)
+	_, _ = fmt.Fprintf(&b, "- Malformed lines: %d\n", rep.MalformedLinesCount)
+	_, _ = fmt.Fprintf(&b, "- Total requests: %d\n\n", rep.TotalRequestsCount)
 
-	b.WriteString("## Обработанные файлы\n\n")
+	b.WriteString("## Processed Files\n\n")
 
 	for _, file := range rep.Files {
 		_, _ = fmt.Fprintf(&b, "- %s\n", file)
 	}
 
-	b.WriteString("\n## Размер ответа (в байтах)\n\n")
-	_, _ = fmt.Fprintf(&b, "- Средний: %.2f\n", rep.ResponseSizeInBytes.Average)
-	_, _ = fmt.Fprintf(&b, "- Максимальный: %d\n", rep.ResponseSizeInBytes.Max)
-	_, _ = fmt.Fprintf(&b, "- 95-й перцентиль (p95): %d\n\n", rep.ResponseSizeInBytes.P95)
+	b.WriteString("\n## Response Size (in bytes)\n\n")
+	_, _ = fmt.Fprintf(&b, "- Average: %.2f\n", rep.ResponseSizeInBytes.Average)
+	_, _ = fmt.Fprintf(&b, "- Max: %d\n", rep.ResponseSizeInBytes.Max)
+	_, _ = fmt.Fprintf(&b, "- 95th percentile (p95): %d\n\n", rep.ResponseSizeInBytes.P95)
 
-	b.WriteString("## Запрашиваемые ресурсы\n\n")
-	b.WriteString("| Ресурс | Количество запросов |\n")
+	b.WriteString("## Requested Resources\n\n")
+	b.WriteString("| Resource | Requests Count |\n")
 	b.WriteString("| --- | --- |\n")
 
 	for _, item := range rep.Resources {
 		_, _ = fmt.Fprintf(&b, "| %s | %d |\n", item.Resource, item.TotalRequestsCount)
 	}
 
-	b.WriteString("\n## Коды ответа\n\n")
-	b.WriteString("| Код ответа | Количество |\n")
+	b.WriteString("\n## Response Codes\n\n")
+	b.WriteString("| Status Code | Count |\n")
 	b.WriteString("| --- | --- |\n")
 
 	for _, code := range slices.Sorted(maps.Keys(rep.ResponseCodes)) {
-		_, _ = fmt.Fprintf(&b, "| %d | %d |\n", code, rep.ResponseCodes[code])
+		_, _ = fmt.Fprintf(&b, "| %s | %d |\n", formatStatusCode(code), rep.ResponseCodes[code])
 	}
 
 	return []byte(b.String())
@@ -85,6 +87,15 @@ func writeExclusive(outputPath string, data []byte) error {
 	}
 
 	return nil
+}
+
+func formatStatusCode(code int) string {
+	text := http.StatusText(code)
+	if text != "" {
+		return fmt.Sprintf("%d %s", code, text)
+	}
+
+	return strconv.Itoa(code)
 }
 
 // Write generates a report in the specified format and saves it to a file without overwriting existing files.

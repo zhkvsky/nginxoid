@@ -77,17 +77,17 @@ func TestWrite(t *testing.T) {
 				require.NoError(t, err)
 
 				content := string(data)
-				assert.Contains(t, content, "# Отчет анализа логов")
-				assert.Contains(t, content, "- Количество файлов: 2")
-				assert.Contains(t, content, "- Обработано строк: 4")
-				assert.Contains(t, content, "- Повреждённых строк: 1")
-				assert.Contains(t, content, "- Всего запросов: 3")
-				assert.Contains(t, content, "- Средний: 256.67")
-				assert.Contains(t, content, "| Ресурс | Количество запросов |")
+				assert.Contains(t, content, "# Log Analysis Report")
+				assert.Contains(t, content, "- Files count: 2")
+				assert.Contains(t, content, "- Processed lines: 4")
+				assert.Contains(t, content, "- Malformed lines: 1")
+				assert.Contains(t, content, "- Total requests: 3")
+				assert.Contains(t, content, "- Average: 256.67")
+				assert.Contains(t, content, "| Resource | Requests Count |")
 				assert.Contains(t, content, "| /api/v1/users | 2 |")
-				assert.Contains(t, content, "| Код ответа | Количество |")
-				assert.Contains(t, content, "| 200 | 2 |")
-				assert.Contains(t, content, "| 404 | 1 |")
+				assert.Contains(t, content, "| Status Code | Count |")
+				assert.Contains(t, content, "| 200 OK | 2 |")
+				assert.Contains(t, content, "| 404 Not Found | 1 |")
 			},
 		},
 		{
